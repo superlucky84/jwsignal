@@ -1,7 +1,7 @@
 {
   "name": "signal-master",
-  "description": "Simple signaling server for SimpleWebRTC",
-  "version": "1.0.1",
+  "description": "jwsignaling",
+  "version": "0.0.0",
   "dependencies": {
     "getconfig": "2.1.0",
     "node-uuid": "1.2.0",
@@ -10,12 +10,10 @@
   },
   "main": "server.js",
   "repository": {
-    "type": "git",
-    "url": "git@github.com:andyet/signal-master.git"
+    "type": "git"
   },
   "devDependencies": {
     "socket.io-client": "1.3.7",
-    "precommit-hook": "0.3.10",
     "tape": "^2.13.1"
   },
   "license": "MIT",
