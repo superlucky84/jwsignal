@@ -2,9 +2,10 @@ var socketIO = require('socket.io'),
     uuid = require('node-uuid'),
     crypto = require('crypto');
 
-var room = {};
+var screenInfo = {};
 module.exports = function (server, config) {
     var io = socketIO.listen(server);
+
 
     io.sockets.on('connection', function (client) {
         client.resources = {
@@ -16,7 +17,10 @@ module.exports = function (server, config) {
         function sendpeer() {
           var peers = [];
           Object.keys(io.sockets.in(client.room).server.eio.clients).forEach(function(jjj) {
-            peers.push(jjj);
+            peers.push({
+              id: jjj,
+              info: screenInfo[jjj]
+            });
           })
           io.sockets.in(client.room).emit('getpeer',peers);
         }
@@ -48,30 +52,9 @@ module.exports = function (server, config) {
         });
 
 
-        // pass a message to another id
-        client.on('message', function (details) {
-            if (!details) return;
-
-            var otherClient = io.to(details.to);
-            if (!otherClient) return;
-
-            details.from = client.id;
-            otherClient.emit('message', details);
-        });
-
-        client.on('shareScreen', function () {
-            client.resources.screen = true;
-        });
-
-        client.on('unshareScreen', function (type) {
-            client.resources.screen = false;
-            removeFeed('screen');
-        });
-
-        client.on('join', join);
-
         function removeFeed(type) {
             if (client.room) {
+              console.log('DISCON-LOG');
                 io.sockets.in(client.room).emit('remove', {
                     id: client.id,
                     type: type
@@ -79,6 +62,7 @@ module.exports = function (server, config) {
                 if (!type) {
                     client.leave(client.room);
                     client.room = undefined;
+                    delete screenInfo[client.id];
                 }
             }
         }
@@ -111,60 +95,25 @@ module.exports = function (server, config) {
             removeFeed();
         });
 
-        client.on('create', function (name, cb) {
-            if (arguments.length == 2) {
-                cb = (typeof cb == 'function') ? cb : function () {};
-                name = name || uuid();
-            } else {
-                cb = name;
-                name = uuid();
-            }
+        client.on('create', function (name, streamBoolean, cb) {
 
+          cb = (typeof cb == 'function') ? cb : function () {};
+          name = name || uuid();
+          screenInfo[client.id] = streamBoolean;
 
-
-            // check if exists
-            var room = io.nsps['/'].adapter.rooms[name];
-            if (room && room.length) {
-                safeCb(cb)('taken');
-            } else {
-                join(name);
-                safeCb(cb)(null, name);
-            }
-            sendpeer();
+          // check if exists
+          var room = io.nsps['/'].adapter.rooms[name];
+          if (room && room.length) {
+              safeCb(cb)('taken');
+          } else {
+              join(name);
+              safeCb(cb)(null, name);
+          }
+          sendpeer();
 
         });
 
-        // support for logging full webrtc traces to stdout
-        // useful for large-scale error monitoring
-        client.on('trace', function (data) {
-            console.log('trace', JSON.stringify(
-            [data.type, data.session, data.prefix, data.peer, data.time, data.value]
-            ));
-        });
 
-
-        // tell client about stun and turn servers and generate nonces
-        client.emit('stunservers', config.stunservers || []);
-
-        // create shared secret nonces for TURN authentication
-        // the process is described in draft-uberti-behave-turn-rest
-        var credentials = [];
-        // allow selectively vending turn credentials based on origin.
-        var origin = client.handshake.headers.origin;
-        if (!config.turnorigins || config.turnorigins.indexOf(origin) !== -1) {
-            config.turnservers.forEach(function (server) {
-                var hmac = crypto.createHmac('sha1', server.secret);
-                // default to 86400 seconds timeout unless specified
-                var username = Math.floor(new Date().getTime() / 1000) + (server.expiry || 86400) + "";
-                hmac.update(username);
-                credentials.push({
-                    username: username,
-                    credential: hmac.digest('base64'),
-                    urls: server.urls || server.url
-                });
-            });
-        }
-        client.emit('turnservers', credentials);
     });
 
 
