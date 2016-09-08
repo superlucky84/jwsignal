@@ -40,13 +40,23 @@ module.exports = function (server, config) {
 
         });
 
-        client.on('candidate', function(peer,candidate) {
+        client.on('localcandidate', function(peer,candidate) {
 
           Object.keys(io.sockets.in(client.room).server.eio.clients).forEach(function(jjj) {
             if (jjj === client.id) {
               return;
             }
-            io.sockets.in(client.room).emit('receivecandidate',client.id,candidate);
+            io.sockets.in(client.room).emit('receivelocalcandidate',client.id,candidate);
+          })
+
+        });
+        client.on('remotecandidate', function(peer,candidate) {
+
+          Object.keys(io.sockets.in(client.room).server.eio.clients).forEach(function(jjj) {
+            if (jjj === client.id) {
+              return;
+            }
+            io.sockets.in(client.room).emit('receiveremotecandidate',client.id,candidate);
           })
 
         });
