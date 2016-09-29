@@ -46,7 +46,8 @@ module.exports = function (server, config) {
             if (jjj === client.id) {
               return;
             }
-            io.sockets.in(client.room).emit('receivelocalcandidate',client.id,candidate);
+            //io.sockets.in(client.room).emit('receivelocalcandidate',client.id,candidate);
+            io.sockets.connected[peer].emit('receivelocalcandidate',client.id,candidate);
           })
 
         });
@@ -56,7 +57,8 @@ module.exports = function (server, config) {
             if (jjj === client.id) {
               return;
             }
-            io.sockets.in(client.room).emit('receiveremotecandidate',client.id,candidate);
+            //io.sockets.in(client.room).emit('receiveremotecandidate',client.id,candidate);
+            io.sockets.connected[peer].emit('receiveremotecandidate',client.id,candidate);
           })
 
         });
